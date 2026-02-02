@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reserva de Entradas - Demo</title>
+  <style>
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      margin: 2rem;
+      background: #f6f7fb;
+      color: #1f2937;
+    }
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      margin-top: 0.4rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+      white-space: pre-wrap;
+    }
+    .hint {
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧪 Sistema de Reservas Resiliente</h1>
+    <span class="hint">UTC: {{ timestamp }}</span>
+  </header>
+
+  <section class="card">
+    <p>Simula una reserva y observa cómo el sistema responde ante fallos.</p>
+
+    <label for="user_id">Usuario</label>
+    <input id="user_id" value="user-01" />
+
+    <label for="event_id">Evento</label>
+    <select id="event_id">
+      <option value="concert-01">Concierto 01</option>
+      <option value="concert-02">Concierto 02</option>
+    </select>
+
+    <label for="quantity">Cantidad</label>
+    <input id="quantity" type="number" value="1" min="1" max="5" />
+
+    <label for="price">Precio (USD)</label>
+    <input id="price" type="number" value="50" min="1" />
+
+    <button id="submit">Reservar</button>
+
+    <pre id="output">Esperando solicitud...</pre>
+  </section>
+
+  <script>
+    const output = document.getElementById("output");
+    const button = document.getElementById("submit");
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      output.textContent = "Enviando solicitud...";
+
+      const payload = {
+        user_id: document.getElementById("user_id").value,
+        event_id: document.getElementById("event_id").value,
+        quantity: Number(document.getElementById("quantity").value),
+        price: Number(document.getElementById("price").value),
+      };
+
+      try {
+        const response = await fetch("/api/reserve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify({ status: response.status, ...data }, null, 2);
+      } catch (error) {
+        output.textContent = `Error en el navegador: ${error}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
