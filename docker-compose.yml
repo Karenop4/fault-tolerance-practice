@@ -1,0 +1,86 @@
+# ============================================
+# DOCKER COMPOSE - Orquestación de Microservicios
+# ============================================
+# Define y configura todos los servicios de la aplicación.
+# ARQUITECTURA: Microservicios con comunicación HTTP entre servicios
+#
+# TOPOLOGÍA DE RED:
+# Cliente → Gateway (5000) → Reservations (5001) → {
+#   - Inventory (5002)
+#   - Payments (5003)
+#   - Notifications (5004)
+# }
+
+services:
+  # ========================================
+  # GATEWAY - Punto de entrada público
+  # ========================================
+  gateway:
+    build: ./services/gateway  # Construir imagen desde Dockerfile local
+    ports:
+      - "5000:5000"  # Exponer puerto 5000 al host (accesible desde localhost:5000)
+    environment:
+      # Variables de entorno para configurar el servicio
+      # Docker DNS resuelve "reservations" al contenedor del servicio
+      - RESERVATIONS_URL=http://reservations:5001
+      - MAX_INFLIGHT=5  # Máximo de peticiones concurrentes (semáforo)
+    depends_on:
+      # Esperar a que el servicio de reservations esté arriba antes de iniciar
+      # NOTA: depends_on solo espera que el contenedor inicie, no que esté "ready"
+      - reservations
+
+  # ========================================
+  # RESERVATIONS - Orquestador principal
+  # ========================================
+  reservations:
+    build: ./services/reservations
+    ports:
+      - "5001:5001"  # Exponer para debugging (opcional)
+    environment:
+      # URLs internas usando Docker DNS (nombre del servicio como hostname)
+      - INVENTORY_URL=http://inventory:5002
+      - PAYMENTS_URL=http://payments:5003
+      - NOTIFICATIONS_URL=http://notifications:5004
+      - DB_PATH=/data/reservations.db  # Ruta de la BD dentro del contenedor
+    volumes:
+      # Montar volumen para persistir la base de datos
+      # /data dentro del contenedor → reservations-data volumen
+      # Esto permite que los datos sobrevivan si el contenedor se reinicia
+      - reservations-data:/data
+    depends_on:
+      - inventory
+      - payments
+      - notifications
+
+  # ========================================
+  # INVENTORY - Gestión de inventario
+  # ========================================
+  inventory:
+    build: ./services/inventory
+    ports:
+      - "5002:5002"
+
+  # ========================================
+  # PAYMENTS - Procesamiento de pagos
+  # ========================================
+  payments:
+    build: ./services/payments
+    ports:
+      - "5003:5003"
+
+  # ========================================
+  # NOTIFICATIONS - Envío de notificaciones
+  # ========================================
+  notifications:
+    build: ./services/notifications
+    ports:
+      - "5004:5004"
+
+# ========================================
+# VOLÚMENES - Almacenamiento persistente
+# ========================================
+volumes:
+  # Volumen para la base de datos de reservations
+  # Docker gestiona el almacenamiento físico
+  # Los datos persisten entre reinicios de contenedores
+  reservations-data:
